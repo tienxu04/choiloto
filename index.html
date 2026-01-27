@@ -318,6 +318,26 @@
       border-color: var(--primary);
     }
     
+    .cell.highlight {
+      animation: glowPulse 2s ease-in-out infinite;
+      box-shadow: 0 0 20px rgba(255, 230, 109, 0.8), 0 0 40px rgba(255, 230, 109, 0.6);
+      background: linear-gradient(135deg, #FFE66D 0%, #FFBF00 100%) !important;
+      border-color: var(--accent);
+      transform: scale(1.1);
+      z-index: 5;
+    }
+    
+    @keyframes glowPulse {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(255, 230, 109, 0.8), 0 0 40px rgba(255, 230, 109, 0.6);
+        transform: scale(1.1);
+      }
+      50% {
+        box-shadow: 0 0 30px rgba(255, 230, 109, 1), 0 0 60px rgba(255, 230, 109, 0.8);
+        transform: scale(1.15);
+      }
+    }
+    
     /* Winner Modal */
     .winner-modal {
       position: fixed;
@@ -487,6 +507,10 @@
     </div>
   </div>
   
+  <footer style="text-align: center; margin-top: 40px; padding: 20px; color: var(--light); font-size: 0.9rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+    © 2026 by <a href="https://github.com/xuxudocsach" target="_blank" style="color: var(--yellow); text-decoration: none; font-weight: 600;">@xuxudocsach</a> × <span style="color: var(--yellow); font-weight: 600;">Claude AI</span>
+  </footer>
+  
   <div class="winner-modal" id="winnerModal">
     <div class="winner-content">
       <h2 id="winnerTitle">🎉</h2>
@@ -559,6 +583,9 @@
       
       // Update dealer grid
       updateDealerMarks(dealerMarked);
+      
+      // Highlight player's number if they have it
+      highlightPlayerNumber(number);
       
       // Start timer
       startTimer();
@@ -656,7 +683,21 @@
       const cell = document.querySelector(`#playerGrid .cell[data-number="${number}"]`);
       if (cell && !cell.classList.contains('marked')) {
         cell.classList.add('marked');
+        cell.classList.remove('highlight'); // Remove highlight when marked
         socket.emit('markNumber', number);
+      }
+    }
+    
+    function highlightPlayerNumber(number) {
+      const cell = document.querySelector(`#playerGrid .cell[data-number="${number}"]`);
+      if (cell && !cell.classList.contains('marked')) {
+        // Add highlight
+        cell.classList.add('highlight');
+        
+        // Remove highlight after 8 seconds
+        setTimeout(() => {
+          cell.classList.remove('highlight');
+        }, 8000);
       }
     }
     
