@@ -457,6 +457,7 @@
         </select>
         <button id="startBtn" onclick="startGame()">🎮 Bắt đầu chơi</button>
         <button id="nextBtn" class="btn-next" onclick="callNext()" disabled>📢 Kêu tiếp!</button>
+        <button onclick="testTTS()" style="font-size: 0.9rem; padding: 10px 20px; background: linear-gradient(135deg, #8D99AE 0%, #6C757D 100%);">🔊 Test giọng</button>
       </div>
       <div class="timer-progress" id="timerProgress" style="display:none;">
         <div class="timer-bar" id="timerBar"></div>
@@ -490,9 +491,14 @@
     <div class="winner-content">
       <h2 id="winnerTitle">🎉</h2>
       <p id="winnerMessage"></p>
-      <button onclick="location.reload()" style="font-size: 1.2rem; padding: 15px 40px;">
-        🔄 Chơi lại
-      </button>
+      <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+        <button onclick="closeWinnerModal()" style="font-size: 1.2rem; padding: 15px 40px; background: linear-gradient(135deg, #8D99AE 0%, #6C757D 100%);">
+          👁️ Xem lại
+        </button>
+        <button onclick="location.reload()" style="font-size: 1.2rem; padding: 15px 40px;">
+          🔄 Chơi lại
+        </button>
+      </div>
     </div>
   </div>
 
@@ -505,6 +511,7 @@
     let tickets = null;
     let timerInterval = null;
     let timeLeft = 15;
+    let ttsEnabled = false; // Track if TTS has been initialized
     
     // Fetch tickets data
     fetch(`${SOCKET_URL}/api/tickets`)
@@ -580,7 +587,35 @@
         alert('Vui lòng chọn tờ dò!');
         return;
       }
+      
+      // Initialize TTS on first user interaction
+      if (!ttsEnabled) {
+        initializeTTS();
+      }
+      
       socket.emit('startGame', ticketId);
+    }
+    
+    function initializeTTS() {
+      // Test TTS to ensure it's working
+      const test = new SpeechSynthesisUtterance('');
+      test.volume = 0;
+      speechSynthesis.speak(test);
+      ttsEnabled = true;
+      console.log('TTS initialized');
+    }
+    
+    function closeWinnerModal() {
+      document.getElementById('winnerModal').classList.remove('show');
+    }
+    
+    function testTTS() {
+      if (!ttsEnabled) {
+        initializeTTS();
+      }
+      speak('Con số gì đây', () => {
+        speak('Số hai mươi ba');
+      });
     }
     
     function callNext() {
@@ -635,16 +670,48 @@
     }
     
     function speak(text, callback) {
+      if (!ttsEnabled) {
+        console.log('TTS not enabled yet');
+        if (callback) callback();
+        return;
+      }
+      
+      // Cancel any ongoing speech
+      speechSynthesis.cancel();
+      
+      // Create utterance
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'vi-VN';
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
+      utterance.rate = 0.85;
+      utterance.pitch = 1.1;
+      utterance.volume = 1;
+      
+      // Try to find Vietnamese voice
+      const voices = speechSynthesis.getVoices();
+      const viVoice = voices.find(voice => voice.lang.startsWith('vi'));
+      if (viVoice) {
+        utterance.voice = viVoice;
+      }
       
       if (callback) {
         utterance.onend = callback;
       }
       
+      utterance.onerror = (event) => {
+        console.error('TTS Error:', event);
+        if (callback) callback();
+      };
+      
+      console.log('Speaking:', text);
       speechSynthesis.speak(utterance);
+    }
+    
+    // Load voices when available
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = () => {
+        const voices = speechSynthesis.getVoices();
+        console.log('Available voices:', voices.filter(v => v.lang.startsWith('vi')));
+      };
     }
     
     function startTimer() {
