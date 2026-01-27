@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lô Tô Việt Nam 🎲</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Baloo+2:wght@700;800&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --primary: #FF6B35;
+      --secondary: #F7931E;
+      --accent: #FDC830;
+      --success: #4ECDC4;
+      --danger: #E63946;
+      --dark: #2B2D42;
+      --light: #FFF8F0;
+      --yellow: #FFE66D;
+      --border: #8D99AE;
+    }
+    
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--dark);
+      position: relative;
+      overflow-x: hidden;
+    }
+    
+    /* Decorative background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        radial-gradient(circle at 20% 50%, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(78, 205, 196, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      animation: slideDown 0.6s ease-out;
+    }
+    
+    h1 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 4rem;
+      color: var(--light);
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.2), 
+                   -2px -2px 0 var(--secondary),
+                   2px 2px 0 var(--primary);
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+    
+    .subtitle {
+      font-size: 1.2rem;
+      color: var(--yellow);
+      font-weight: 600;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    /* Control Panel */
+    .controls {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: fadeIn 0.8s ease-out 0.2s both;
+    }
+    
+    .control-row {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    select, button {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 1.1rem;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    select {
+      background: var(--light);
+      color: var(--dark);
+      border: 3px solid var(--primary);
+    }
+    
+    button {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-next {
+      background: linear-gradient(135deg, var(--success) 0%, #2EC4B6 100%);
+      box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+      font-size: 1.3rem;
+      padding: 15px 40px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    /* Number Display */
+    .number-display {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: fadeIn 0.8s ease-out 0.4s both;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .phrase {
+      font-family: 'Baloo 2', cursive;
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 15px;
+      animation: bounce 0.6s ease-out;
+    }
+    
+    .current-number {
+      font-family: 'Baloo 2', cursive;
+      font-size: 5rem;
+      color: var(--dark);
+      font-weight: 800;
+      text-shadow: 3px 3px 0 var(--yellow);
+      animation: zoomIn 0.5s ease-out;
+    }
+    
+    .vietnamese-text {
+      font-size: 1.8rem;
+      color: var(--secondary);
+      font-weight: 600;
+      margin-top: 10px;
+    }
+    
+    .called-numbers {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .called-number {
+      background: var(--yellow);
+      color: var(--dark);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Tickets Grid */
+    .tickets-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+      animation: fadeIn 0.8s ease-out 0.6s both;
+    }
+    
+    @media (max-width: 1024px) {
+      .tickets-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .ticket-wrapper {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .ticket-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid var(--primary);
+    }
+    
+    .ticket-title {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.8rem;
+      color: var(--primary);
+    }
+    
+    .ticket-color {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 3px solid var(--dark);
+    }
+    
+    .ticket-color.yellow {
+      background: linear-gradient(135deg, #FFE66D 0%, #FFBF00 100%);
+    }
+    
+    .ticket-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 6px;
+      background: var(--light);
+      padding: 15px;
+      border-radius: 15px;
+    }
+    
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      position: relative;
+      border: 2px solid var(--border);
+    }
+    
+    .cell.empty {
+      background: transparent;
+      border: none;
+    }
+    
+    .cell.number {
+      background: white;
+      cursor: pointer;
+    }
+    
+    .cell.number:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    
+    .cell.marked {
+      background: linear-gradient(135deg, var(--success) 0%, #2EC4B6 100%);
+      color: white;
+      border-color: var(--success);
+      animation: markAnimation 0.3s ease-out;
+    }
+    
+    .cell.marked::after {
+      content: '✓';
+      position: absolute;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .cell.dealer-auto {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    /* Winner Modal */
+    .winner-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .winner-modal.show {
+      display: flex;
+    }
+    
+    .winner-content {
+      background: white;
+      padding: 50px;
+      border-radius: 30px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: zoomIn 0.5s ease-out;
+    }
+    
+    .winner-content h2 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 4rem;
+      color: var(--primary);
+      margin-bottom: 20px;
+      text-shadow: 3px 3px 0 var(--yellow);
+    }
+    
+    .winner-content p {
+      font-size: 1.5rem;
+      margin-bottom: 30px;
+      color: var(--dark);
+    }
+    
+    .firework {
+      position: fixed;
+      width: 5px;
+      height: 5px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: firework 1s ease-out infinite;
+    }
+    
+    /* Animations */
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes zoomIn {
+      from {
+        transform: scale(0);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes markAnimation {
+      0% { transform: scale(0.5); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    
+    @keyframes firework {
+      0% {
+        transform: translate(0, 0);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--x), var(--y));
+        opacity: 0;
+      }
+    }
+    
+    /* Timer Progress */
+    .timer-progress {
+      width: 100%;
+      height: 6px;
+      background: var(--light);
+      border-radius: 3px;
+      margin-top: 15px;
+      overflow: hidden;
+    }
+    
+    .timer-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--success) 0%, var(--primary) 100%);
+      transition: width 0.1s linear;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎲 LÔ TÔ VIỆT NAM 🎲</h1>
+      <p class="subtitle">Chơi là thắng! Vui là chính! 🎉</p>
+    </header>
+    
+    <div class="controls">
+      <div class="control-row">
+        <select id="ticketSelect">
+          <option value="">-- Chọn tờ dò của bạn --</option>
+          <option value="1">Tờ 1 (Vàng)</option>
+          <option value="2">Tờ 2 (Vàng)</option>
+        </select>
+        <button id="startBtn" onclick="startGame()">🎮 Bắt đầu chơi</button>
+        <button id="nextBtn" class="btn-next" onclick="callNext()" disabled>📢 Kêu tiếp!</button>
+      </div>
+      <div class="timer-progress" id="timerProgress" style="display:none;">
+        <div class="timer-bar" id="timerBar"></div>
+      </div>
+    </div>
+    
+    <div class="number-display" id="numberDisplay">
+      <p style="font-size: 1.5rem; color: #8D99AE;">Chọn tờ dò và bắt đầu chơi! 🎯</p>
+    </div>
+    
+    <div class="tickets-container">
+      <div class="ticket-wrapper">
+        <div class="ticket-header">
+          <h2 class="ticket-title">🏠 Nhà Cái</h2>
+          <span class="ticket-color yellow" id="dealerColor"></span>
+        </div>
+        <div class="ticket-grid" id="dealerGrid"></div>
+      </div>
+      
+      <div class="ticket-wrapper">
+        <div class="ticket-header">
+          <h2 class="ticket-title">👤 Người Chơi</h2>
+          <span class="ticket-color yellow" id="playerColor"></span>
+        </div>
+        <div class="ticket-grid" id="playerGrid"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="winner-modal" id="winnerModal">
+    <div class="winner-content">
+      <h2 id="winnerTitle">🎉</h2>
+      <p id="winnerMessage"></p>
+      <button onclick="location.reload()" style="font-size: 1.2rem; padding: 15px 40px;">
+        🔄 Chơi lại
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // CHANGE THIS TO YOUR RENDER.COM BACKEND URL
+    const SOCKET_URL = 'http://localhost:3000'; // Replace with: https://your-app.onrender.com
+    
+    const socket = io(SOCKET_URL);
+    let gameStarted = false;
+    let tickets = null;
+    let timerInterval = null;
+    let timeLeft = 15;
+    
+    // Fetch tickets data
+    fetch(`${SOCKET_URL}/api/tickets`)
+      .then(res => res.json())
+      .then(data => {
+        tickets = data;
+      });
+    
+    // Socket listeners
+    socket.on('gameStarted', (data) => {
+      gameStarted = true;
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('nextBtn').disabled = false;
+      document.getElementById('ticketSelect').disabled = true;
+      
+      renderTicket('dealer', data.dealerTicketId);
+      renderTicket('player', data.playerTicketId);
+      
+      document.getElementById('numberDisplay').innerHTML = `
+        <p style="font-size: 1.8rem; color: var(--success); font-weight: 700;">
+          ✅ Game đã bắt đầu! Chúc may mắn! 🍀
+        </p>
+      `;
+    });
+    
+    socket.on('numberCalled', (data) => {
+      const { phrase, number, vietnamese, calledNumbers, dealerMarked } = data;
+      
+      // Speak the phrase and number
+      speak(phrase, () => {
+        speak(vietnamese);
+      });
+      
+      // Update display
+      document.getElementById('numberDisplay').innerHTML = `
+        <div class="phrase">${phrase}</div>
+        <div class="current-number">${number}</div>
+        <div class="vietnamese-text">${vietnamese}</div>
+        <div class="called-numbers">
+          ${calledNumbers.slice(-20).reverse().map(n => 
+            `<span class="called-number">${n}</span>`
+          ).join('')}
+        </div>
+      `;
+      
+      // Update dealer grid
+      updateDealerMarks(dealerMarked);
+      
+      // Start timer
+      startTimer();
+    });
+    
+    socket.on('gameWon', (data) => {
+      clearInterval(timerInterval);
+      document.getElementById('nextBtn').disabled = true;
+      document.getElementById('winnerTitle').textContent = 
+        data.winner === 'player' ? '🎉 CHIẾN THẮNG! 🎉' : '😢 Nhà cái thắng rồi!';
+      document.getElementById('winnerMessage').textContent = data.message;
+      document.getElementById('winnerModal').classList.add('show');
+      
+      speak(data.message);
+      createFireworks();
+    });
+    
+    socket.on('playerMarked', (data) => {
+      // Already handled by click
+    });
+    
+    // Functions
+    function startGame() {
+      const ticketId = parseInt(document.getElementById('ticketSelect').value);
+      if (!ticketId) {
+        alert('Vui lòng chọn tờ dò!');
+        return;
+      }
+      socket.emit('startGame', ticketId);
+    }
+    
+    function callNext() {
+      clearInterval(timerInterval);
+      document.getElementById('timerProgress').style.display = 'none';
+      socket.emit('callNext');
+    }
+    
+    function renderTicket(type, ticketId) {
+      const ticket = tickets.tickets.find(t => t.id === ticketId);
+      if (!ticket) return;
+      
+      const gridEl = document.getElementById(`${type}Grid`);
+      const colorEl = document.getElementById(`${type}Color`);
+      
+      colorEl.className = `ticket-color ${ticket.color}`;
+      
+      gridEl.innerHTML = '';
+      ticket.grid.forEach((row, rowIdx) => {
+        row.forEach((num, colIdx) => {
+          const cell = document.createElement('div');
+          cell.className = num === 0 ? 'cell empty' : 'cell number';
+          cell.textContent = num === 0 ? '' : num;
+          cell.dataset.number = num;
+          
+          if (type === 'player' && num > 0) {
+            cell.onclick = () => markPlayerNumber(num);
+          }
+          
+          gridEl.appendChild(cell);
+        });
+      });
+    }
+    
+    function markPlayerNumber(number) {
+      if (!gameStarted) return;
+      
+      const cell = document.querySelector(`#playerGrid .cell[data-number="${number}"]`);
+      if (cell && !cell.classList.contains('marked')) {
+        cell.classList.add('marked');
+        socket.emit('markNumber', number);
+      }
+    }
+    
+    function updateDealerMarks(dealerMarked) {
+      Object.keys(dealerMarked).forEach(num => {
+        const cell = document.querySelector(`#dealerGrid .cell[data-number="${num}"]`);
+        if (cell) {
+          cell.classList.add('dealer-auto');
+        }
+      });
+    }
+    
+    function speak(text, callback) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'vi-VN';
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      
+      if (callback) {
+        utterance.onend = callback;
+      }
+      
+      speechSynthesis.speak(utterance);
+    }
+    
+    function startTimer() {
+      clearInterval(timerInterval);
+      timeLeft = 15;
+      document.getElementById('timerProgress').style.display = 'block';
+      document.getElementById('timerBar').style.width = '100%';
+      
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        const percentage = (timeLeft / 15) * 100;
+        document.getElementById('timerBar').style.width = percentage + '%';
+        
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          callNext();
+        }
+      }, 1000);
+    }
+    
+    function createFireworks() {
+      for (let i = 0; i < 50; i++) {
+        setTimeout(() => {
+          const firework = document.createElement('div');
+          firework.className = 'firework';
+          firework.style.left = Math.random() * 100 + '%';
+          firework.style.top = Math.random() * 100 + '%';
+          firework.style.setProperty('--x', (Math.random() - 0.5) * 200 + 'px');
+          firework.style.setProperty('--y', (Math.random() - 0.5) * 200 + 'px');
+          document.body.appendChild(firework);
+          
+          setTimeout(() => firework.remove(), 1000);
+        }, i * 100);
+      }
+    }
+  </script>
+</body>
+</html>
