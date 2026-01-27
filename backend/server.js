@@ -180,15 +180,7 @@ io.on('connection', (socket) => {
     // Auto-mark dealer
     autoMarkDealer(number);
     
-    // Check dealer win
-    const dealerTicket = tickets.tickets.find(t => t.id === gameState.dealerTicketId);
-    if (checkRowWin(dealerTicket.grid, gameState.dealerMarked)) {
-      gameState.winner = 'dealer';
-      io.emit('gameWon', { winner: 'dealer', message: 'Nhà cái thắng!' });
-      return;
-    }
-    
-    // Emit number call
+    // Emit number call FIRST so UI updates
     io.emit('numberCalled', {
       phrase: phrase,
       number: number,
@@ -198,6 +190,15 @@ io.on('connection', (socket) => {
     });
     
     io.emit('gameState', gameState);
+    
+    // Check dealer win AFTER a short delay to let UI update
+    setTimeout(() => {
+      const dealerTicket = tickets.tickets.find(t => t.id === gameState.dealerTicketId);
+      if (checkRowWin(dealerTicket.grid, gameState.dealerMarked)) {
+        gameState.winner = 'dealer';
+        io.emit('gameWon', { winner: 'dealer', message: 'Nhà cái thắng!' });
+      }
+    }, 1500); // 1.5s delay to let UI render the marked number
   });
   
   // Player marks number
@@ -206,15 +207,17 @@ io.on('connection', (socket) => {
     
     gameState.playerMarked[number] = true;
     
-    // Check player win
-    const playerTicket = tickets.tickets.find(t => t.id === gameState.playerTicketId);
-    if (checkRowWin(playerTicket.grid, gameState.playerMarked)) {
-      gameState.winner = 'player';
-      io.emit('gameWon', { winner: 'player', message: 'Người chơi thắng!' });
-      return;
-    }
-    
+    // Emit marked first so UI updates
     io.emit('playerMarked', { number, playerMarked: gameState.playerMarked });
+    
+    // Check player win AFTER a short delay to let UI update
+    setTimeout(() => {
+      const playerTicket = tickets.tickets.find(t => t.id === gameState.playerTicketId);
+      if (checkRowWin(playerTicket.grid, gameState.playerMarked)) {
+        gameState.winner = 'player';
+        io.emit('gameWon', { winner: 'player', message: 'Người chơi thắng!' });
+      }
+    }, 800); // 0.8s delay
   });
   
   socket.on('disconnect', () => {
