@@ -534,7 +534,7 @@
     let gameStarted = false;
     let tickets = null;
     let timerInterval = null;
-    let timeLeft = 15;
+    let timeLeft = 5;
     let ttsEnabled = false; // Track if TTS has been initialized
     
     // Fetch tickets data
@@ -757,13 +757,13 @@
     
     function startTimer() {
       clearInterval(timerInterval);
-      timeLeft = 15;
+      timeLeft = 5;
       document.getElementById('timerProgress').style.display = 'block';
       document.getElementById('timerBar').style.width = '100%';
       
       timerInterval = setInterval(() => {
         timeLeft--;
-        const percentage = (timeLeft / 15) * 100;
+        const percentage = (timeLeft / 5) * 100;
         document.getElementById('timerBar').style.width = percentage + '%';
         
         if (timeLeft <= 0) {
