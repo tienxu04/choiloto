@@ -2,6 +2,7 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const fetch = require('node-fetch');
 
 const app = express();
 app.use(cors());
@@ -14,6 +15,11 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
+
+// FPT.AI TTS Configuration
+const FPT_API_KEY = process.env.FPT_API_KEY || 'lbYHcaepiyxj0hUfQ5ZB9jNysTgOyhMQ';
+const FPT_TTS_URL = 'https://api.fpt.ai/hmi/tts/v5';
+const FPT_VOICE = 'minhquang';
 
 // Game data
 const tickets = {
@@ -125,6 +131,33 @@ function autoMarkDealer(number) {
   }
 }
 
+// Helper: Call FPT.AI TTS to generate audio
+async function generateTTSAudio(text) {
+  try {
+    const response = await fetch(FPT_TTS_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': FPT_API_KEY,
+        'speed': '',
+        'voice': FPT_VOICE
+      },
+      body: text
+    });
+    
+    if (!response.ok) {
+      console.error('FPT.AI TTS error:', response.status);
+      return null;
+    }
+    
+    const audioBuffer = await response.buffer();
+    const base64Audio = audioBuffer.toString('base64');
+    return `data:audio/mp3;base64,${base64Audio}`;
+  } catch (error) {
+    console.error('FPT.AI TTS error:', error);
+    return null;
+  }
+}
+
 // Socket.io connection
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -156,7 +189,7 @@ io.on('connection', (socket) => {
   });
   
   // Call next number
-  socket.on('callNext', () => {
+  socket.on('callNext', async () => {
     if (!gameState.started || gameState.winner) return;
     
     if (gameState.availableNumbers.length === 0) {
@@ -177,14 +210,23 @@ io.on('connection', (socket) => {
     const phrase = phrases[gameState.phraseIndex];
     gameState.phraseIndex = (gameState.phraseIndex + 1) % 3;
     
+    // Generate audio for phrase
+    const phraseAudio = await generateTTSAudio(phrase);
+    
+    // Generate audio for number
+    const vietnameseNumber = numberToVietnamese(number);
+    const numberAudio = await generateTTSAudio(vietnameseNumber);
+    
     // Auto-mark dealer
     autoMarkDealer(number);
     
     // Emit number call FIRST so UI updates
     io.emit('numberCalled', {
       phrase: phrase,
+      phraseAudio: phraseAudio,
       number: number,
-      vietnamese: numberToVietnamese(number),
+      vietnamese: vietnameseNumber,
+      numberAudio: numberAudio,
       calledNumbers: gameState.calledNumbers,
       dealerMarked: gameState.dealerMarked
     });
