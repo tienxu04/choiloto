@@ -145,7 +145,21 @@
       box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
       font-size: 1.3rem;
       padding: 15px 40px;
+      
+      /* Floating sticky button */
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      
       animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .btn-next:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      animation: none;
     }
     
     @keyframes pulse {
@@ -476,13 +490,15 @@
           <option value="2">Tờ 2 (Vàng)</option>
         </select>
         <button id="startBtn" onclick="startGame()">🎮 Bắt đầu chơi</button>
-        <button id="nextBtn" class="btn-next" onclick="callNext()" disabled>📢 Kêu tiếp!</button>
         <button onclick="testTTS()" style="font-size: 0.9rem; padding: 10px 20px; background: linear-gradient(135deg, #8D99AE 0%, #6C757D 100%);">🔊 Test giọng</button>
       </div>
       <div class="timer-progress" id="timerProgress" style="display:none;">
         <div class="timer-bar" id="timerBar"></div>
       </div>
     </div>
+    
+    <!-- Floating Next Button -->
+    <button id="nextBtn" class="btn-next" onclick="callNext()" disabled>📢 Kêu tiếp!</button>
     
     <div class="number-display" id="numberDisplay">
       <p style="font-size: 1.5rem; color: #8D99AE;">Chọn tờ dò và bắt đầu chơi! 🎯</p>
@@ -527,15 +543,16 @@
   </div>
 
   <script>
-    // CHANGE THIS TO YOUR RENDER.COM BACKEND URL
-    const SOCKET_URL = 'https://choiloto.onrender.com'; // Replace with: https://your-app.onrender.com
+    // Backend URL
+    const SOCKET_URL = 'https://choiloto.onrender.com';
     
     const socket = io(SOCKET_URL);
     let gameStarted = false;
     let tickets = null;
     let timerInterval = null;
-    let timeLeft = 5;
-    let ttsEnabled = false; // Track if TTS has been initialized
+    let timeLeft = 5; // Changed to 5 seconds
+    let ttsEnabled = false;
+    let currentCalledNumbers = []; // Track all called numbers for validation
     
     // Fetch tickets data
     fetch(`${SOCKET_URL}/api/tickets`)
@@ -562,12 +579,18 @@
     });
     
     socket.on('numberCalled', (data) => {
-      const { phrase, number, vietnamese, calledNumbers, dealerMarked } = data;
+      const { phrase, phraseAudio, number, vietnamese, numberAudio, calledNumbers, dealerMarked } = data;
       
-      // Speak the phrase and number
-      speak(phrase, () => {
-        speak(vietnamese);
-      });
+      // Update called numbers list for validation
+      currentCalledNumbers = calledNumbers;
+      
+      // Play FPT.AI audio (phrase then number)
+      if (phraseAudio && numberAudio) {
+        playAudioSequence(phraseAudio, numberAudio);
+      } else {
+        // Fallback to text if audio generation failed
+        console.warn('Audio generation failed, displaying text only');
+      }
       
       // Update display
       document.getElementById('numberDisplay').innerHTML = `
@@ -604,7 +627,15 @@
     });
     
     socket.on('playerMarked', (data) => {
-      // Already handled by click
+      const { number, playerMarked } = data;
+      // Update all marked cells to sync across devices
+      Object.keys(playerMarked).forEach(num => {
+        const cell = document.querySelector(`#playerGrid .cell[data-number="${num}"]`);
+        if (cell && !cell.classList.contains('marked')) {
+          cell.classList.add('marked');
+          cell.classList.remove('highlight');
+        }
+      });
     });
     
     // Functions
@@ -680,6 +711,12 @@
     function markPlayerNumber(number) {
       if (!gameStarted) return;
       
+      // Validate: only allow clicks on numbers that have been called
+      if (!currentCalledNumbers.includes(number)) {
+        console.log('Invalid click: number', number, 'has not been called yet');
+        return;
+      }
+      
       const cell = document.querySelector(`#playerGrid .cell[data-number="${number}"]`);
       if (cell && !cell.classList.contains('marked')) {
         cell.classList.add('marked');
@@ -699,6 +736,18 @@
           cell.classList.remove('highlight');
         }, 8000);
       }
+    }
+    
+    function playAudioSequence(phraseAudio, numberAudio) {
+      // Play phrase audio first
+      const phraseAudioEl = new Audio(phraseAudio);
+      phraseAudioEl.play().catch(err => console.error('Phrase audio error:', err));
+      
+      // When phrase ends, play number audio
+      phraseAudioEl.onended = () => {
+        const numberAudioEl = new Audio(numberAudio);
+        numberAudioEl.play().catch(err => console.error('Number audio error:', err));
+      };
     }
     
     function updateDealerMarks(dealerMarked) {
@@ -757,13 +806,13 @@
     
     function startTimer() {
       clearInterval(timerInterval);
-      timeLeft = 5;
+      timeLeft = 5; // Changed to 5 seconds
       document.getElementById('timerProgress').style.display = 'block';
       document.getElementById('timerBar').style.width = '100%';
       
       timerInterval = setInterval(() => {
         timeLeft--;
-        const percentage = (timeLeft / 5) * 100;
+        const percentage = (timeLeft / 5) * 100; // Changed to 5 seconds
         document.getElementById('timerBar').style.width = percentage + '%';
         
         if (timeLeft <= 0) {
