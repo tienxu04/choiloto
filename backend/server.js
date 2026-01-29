@@ -17,9 +17,16 @@ const io = new Server(httpServer, {
 });
 
 // FPT.AI TTS Configuration
-const FPT_API_KEY = process.env.FPT_API_KEY || 'lbYHcaepiyxj0hUfQ5ZB9jNysTgOyhMQ';
+const FPT_API_KEY = process.env.FPT_API_KEY;
 const FPT_TTS_URL = 'https://api.fpt.ai/hmi/tts/v5';
 const FPT_VOICE = 'minhquang';
+
+// Check if API key is set
+if (!FPT_API_KEY) {
+  console.error('ERROR: FPT_API_KEY environment variable is not set!');
+  console.error('Please set it on Render.com: Dashboard → Environment → Add Variable');
+  process.exit(1);
+}
 
 // Game data
 const tickets = {
