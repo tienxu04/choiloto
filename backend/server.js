@@ -149,9 +149,15 @@ async function generateTTSAudio(text) {
       return null;
     }
     
-    const audioBuffer = await response.buffer();
-    const base64Audio = audioBuffer.toString('base64');
-    return `data:audio/mp3;base64,${base64Audio}`;
+    const data = await response.json();
+    
+    if (data.error === 0 && data.async) {
+      // Return the audio URL directly
+      return data.async;
+    } else {
+      console.error('FPT.AI TTS error:', data.message);
+      return null;
+    }
   } catch (error) {
     console.error('FPT.AI TTS error:', error);
     return null;
