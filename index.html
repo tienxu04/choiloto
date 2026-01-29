@@ -274,6 +274,34 @@
       background: linear-gradient(135deg, #FFE66D 0%, #FFBF00 100%);
     }
     
+    .ticket-color.red {
+      background: linear-gradient(135deg, #FF6B6B 0%, #C92A2A 100%);
+    }
+    
+    .ticket-color.blue {
+      background: linear-gradient(135deg, #4DABF7 0%, #1971C2 100%);
+    }
+    
+    .ticket-color.maroon {
+      background: linear-gradient(135deg, #A61E4D 0%, #5C0B28 100%);
+    }
+    
+    .ticket-color.grey {
+      background: linear-gradient(135deg, #ADB5BD 0%, #495057 100%);
+    }
+    
+    .ticket-color.pink {
+      background: linear-gradient(135deg, #FFA8D5 0%, #E64980 100%);
+    }
+    
+    .ticket-color.orange {
+      background: linear-gradient(135deg, #FFA94D 0%, #FD7E14 100%);
+    }
+    
+    .ticket-color.purple {
+      background: linear-gradient(135deg, #B197FC 0%, #7950F2 100%);
+    }
+    
     .ticket-grid {
       display: grid;
       grid-template-columns: repeat(9, 1fr);
@@ -486,8 +514,7 @@
       <div class="control-row">
         <select id="ticketSelect">
           <option value="">-- Chọn tờ dò của bạn --</option>
-          <option value="1">Tờ 1 (Vàng)</option>
-          <option value="2">Tờ 2 (Vàng)</option>
+          <!-- Options will be auto-generated from backend data -->
         </select>
         <button id="startBtn" onclick="startGame()">🎮 Bắt đầu chơi</button>
       </div>
@@ -523,7 +550,7 @@
   </div>
   
   <footer style="text-align: center; margin-top: 40px; padding: 20px; color: var(--light); font-size: 0.9rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
-    © 2026 by <a href="https://instagram.com/xuxudocsach" target="_blank" style="color: var(--yellow); text-decoration: none; font-weight: 600;">@xuxudocsach</a> × <span style="color: var(--yellow); font-weight: 600;">Claude AI</span>
+    © 2026 by <a href="https://github.com/xuxudocsach" target="_blank" style="color: var(--yellow); text-decoration: none; font-weight: 600;">@xuxudocsach</a> × <span style="color: var(--yellow); font-weight: 600;">Claude AI</span>
   </footer>
   
   <div class="winner-modal" id="winnerModal">
@@ -553,11 +580,41 @@
     let currentCalledNumbers = []; // Track all called numbers for validation
     let audioContext = null; // For autoplay unlock
     
-    // Fetch tickets data
+    // Color name mapping to Vietnamese
+    const colorNames = {
+      'yellow': 'Vàng',
+      'red': 'Đỏ',
+      'blue': 'Xanh Dương',
+      'maroon': 'Nâu Đỏ',
+      'grey': 'Xám',
+      'pink': 'Hồng',
+      'orange': 'Cam',
+      'purple': 'Tím'
+    };
+    
+    // Fetch tickets data and populate dropdown
     fetch(`${SOCKET_URL}/api/tickets`)
       .then(res => res.json())
       .then(data => {
         tickets = data;
+        const select = document.getElementById('ticketSelect');
+        
+        // Clear existing options except the first one
+        while (select.options.length > 1) {
+          select.remove(1);
+        }
+        
+        // Add all tickets as options
+        data.tickets.forEach(ticket => {
+          const option = document.createElement('option');
+          option.value = ticket.id;
+          option.textContent = `Tờ ${ticket.id} (${colorNames[ticket.color] || ticket.color})`;
+          select.appendChild(option);
+        });
+      })
+      .catch(err => {
+        console.error('Failed to load tickets:', err);
+        alert('Không thể tải danh sách tờ dò. Vui lòng refresh trang!');
       });
     
     // Socket listeners
