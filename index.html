@@ -490,7 +490,6 @@
           <option value="2">Tờ 2 (Vàng)</option>
         </select>
         <button id="startBtn" onclick="startGame()">🎮 Bắt đầu chơi</button>
-        <button onclick="testTTS()" style="font-size: 0.9rem; padding: 10px 20px; background: linear-gradient(135deg, #8D99AE 0%, #6C757D 100%);">🔊 Test giọng</button>
       </div>
       <div class="timer-progress" id="timerProgress" style="display:none;">
         <div class="timer-bar" id="timerBar"></div>
@@ -524,7 +523,7 @@
   </div>
   
   <footer style="text-align: center; margin-top: 40px; padding: 20px; color: var(--light); font-size: 0.9rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
-    © 2026 by <a href="https://github.com/xuxudocsach" target="_blank" style="color: var(--yellow); text-decoration: none; font-weight: 600;">@xuxudocsach</a> × <span style="color: var(--yellow); font-weight: 600;">Claude AI</span>
+    © 2026 by <a href="https://instagram.com/xuxudocsach" target="_blank" style="color: var(--yellow); text-decoration: none; font-weight: 600;">@xuxudocsach</a> × <span style="color: var(--yellow); font-weight: 600;">Claude AI</span>
   </footer>
   
   <div class="winner-modal" id="winnerModal">
@@ -551,8 +550,8 @@
     let tickets = null;
     let timerInterval = null;
     let timeLeft = 5; // Changed to 5 seconds
-    let ttsEnabled = false;
     let currentCalledNumbers = []; // Track all called numbers for validation
+    let audioContext = null; // For autoplay unlock
     
     // Fetch tickets data
     fetch(`${SOCKET_URL}/api/tickets`)
@@ -646,34 +645,31 @@
         return;
       }
       
-      // Initialize TTS on first user interaction
-      if (!ttsEnabled) {
-        initializeTTS();
-      }
+      // Unlock audio playback with user interaction
+      unlockAudio();
       
       socket.emit('startGame', ticketId);
     }
     
-    function initializeTTS() {
-      // Test TTS to ensure it's working
-      const test = new SpeechSynthesisUtterance('');
-      test.volume = 0;
-      speechSynthesis.speak(test);
-      ttsEnabled = true;
-      console.log('TTS initialized');
+    function unlockAudio() {
+      // Create audio context and play silent sound to unlock autoplay
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      
+      // Play a silent audio to unlock
+      const silentAudio = new Audio();
+      silentAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABhADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1f////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAYYSEPXwAAAAAAAAAAAAAAAAAAAAA//sQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7EMQAD/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
+      silentAudio.play().catch(() => {});
+      
+      console.log('Audio unlocked for autoplay');
     }
     
     function closeWinnerModal() {
       document.getElementById('winnerModal').classList.remove('show');
-    }
-    
-    function testTTS() {
-      if (!ttsEnabled) {
-        initializeTTS();
-      }
-      speak('Con số gì đây', () => {
-        speak('Số hai mươi ba');
-      });
     }
     
     function callNext() {
@@ -739,14 +735,39 @@
     }
     
     function playAudioSequence(phraseAudio, numberAudio) {
+      console.log('Playing audio sequence...');
+      console.log('Phrase audio URL:', phraseAudio);
+      console.log('Number audio URL:', numberAudio);
+      
       // Play phrase audio first
       const phraseAudioEl = new Audio(phraseAudio);
-      phraseAudioEl.play().catch(err => console.error('Phrase audio error:', err));
+      phraseAudioEl.volume = 1;
+      
+      phraseAudioEl.play()
+        .then(() => {
+          console.log('✅ Phrase audio playing');
+        })
+        .catch(err => {
+          console.error('❌ Phrase audio error:', err);
+        });
       
       // When phrase ends, play number audio
       phraseAudioEl.onended = () => {
+        console.log('Phrase ended, playing number...');
         const numberAudioEl = new Audio(numberAudio);
-        numberAudioEl.play().catch(err => console.error('Number audio error:', err));
+        numberAudioEl.volume = 1;
+        
+        numberAudioEl.play()
+          .then(() => {
+            console.log('✅ Number audio playing');
+          })
+          .catch(err => {
+            console.error('❌ Number audio error:', err);
+          });
+      };
+      
+      phraseAudioEl.onerror = (err) => {
+        console.error('❌ Phrase audio load error:', err);
       };
     }
     
@@ -757,51 +778,6 @@
           cell.classList.add('dealer-auto');
         }
       });
-    }
-    
-    function speak(text, callback) {
-      if (!ttsEnabled) {
-        console.log('TTS not enabled yet');
-        if (callback) callback();
-        return;
-      }
-      
-      // Cancel any ongoing speech
-      speechSynthesis.cancel();
-      
-      // Create utterance
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'vi-VN';
-      utterance.rate = 0.85;
-      utterance.pitch = 1.1;
-      utterance.volume = 1;
-      
-      // Try to find Vietnamese voice
-      const voices = speechSynthesis.getVoices();
-      const viVoice = voices.find(voice => voice.lang.startsWith('vi'));
-      if (viVoice) {
-        utterance.voice = viVoice;
-      }
-      
-      if (callback) {
-        utterance.onend = callback;
-      }
-      
-      utterance.onerror = (event) => {
-        console.error('TTS Error:', event);
-        if (callback) callback();
-      };
-      
-      console.log('Speaking:', text);
-      speechSynthesis.speak(utterance);
-    }
-    
-    // Load voices when available
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = () => {
-        const voices = speechSynthesis.getVoices();
-        console.log('Available voices:', voices.filter(v => v.lang.startsWith('vi')));
-      };
     }
     
     function startTimer() {
